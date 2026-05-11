@@ -47,7 +47,7 @@ function Navbar() {
   ];
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-navy-dark/95 backdrop-blur-md border-b border-white/10">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-navy-dark/70 backdrop-blur-lg border-b border-white/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
@@ -71,7 +71,7 @@ function Navbar() {
               <a
                 key={link.href}
                 href={link.href}
-                className="text-sm text-slate-300 hover:text-gold transition-colors duration-200"
+                className="text-sm font-semibold text-slate-200 hover:text-gold transition-colors duration-200"
               >
                 {link.label}
               </a>
@@ -163,8 +163,8 @@ function Hero() {
           alt="Transporte y logistica"
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-navy-dark via-navy-dark/90 to-navy-dark/70" />
-        <div className="absolute inset-0 bg-gradient-to-t from-navy-dark via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/30 to-black/20" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
       </div>
 
       {/* Content */}
@@ -175,17 +175,17 @@ function Hero() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
           >
-            <Badge className="mb-6 bg-gold/20 text-gold border-gold/30 px-4 py-1.5 text-sm">
+            <Badge className="mb-6 bg-gold text-navy-dark border-gold px-4 py-2 text-sm font-bold">
               <Star className="w-3.5 h-3.5 mr-1.5" />
               Mas de 500 empresas confian en nosotros
             </Badge>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-white leading-tight mb-6">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-white leading-tight mb-6 drop-shadow-[0_2px_10px_rgba(0,0,0,0.7)]">
               Tu socio estrategico en el{" "}
               <span className="text-gold">sector transporte</span>
             </h1>
 
-            <p className="text-lg sm:text-xl text-slate-300 mb-8 max-w-2xl leading-relaxed">
+            <p className="text-lg sm:text-xl font-medium text-white mb-8 max-w-2xl leading-relaxed drop-shadow-[0_1px_6px_rgba(0,0,0,0.8)]">
               Te ayudamos a construir, crecer y proteger tu negocio de
               transporte. Desde la creacion de tu LLC hasta la contabilidad y
               los impuestos, somos tu equipo de expertos.
@@ -195,7 +195,7 @@ function Hero() {
               <a href="#contacto">
                 <Button
                   size="lg"
-                  className="bg-gold hover:bg-gold-light text-navy-dark font-bold text-base px-8 py-6 w-full sm:w-auto"
+                  className="bg-gold hover:bg-gold-light text-navy-dark font-extrabold text-lg px-10 py-7 w-full sm:w-auto shadow-lg shadow-gold/30 hover:shadow-xl hover:shadow-gold/40"
                 >
                   Comienza Tu Consulta Gratis
                   <ChevronRight className="w-5 h-5 ml-2" />
@@ -203,9 +203,8 @@ function Hero() {
               </a>
               <a href="#servicios">
                 <Button
-                  variant="outline"
                   size="lg"
-                  className="border-white/30 text-white hover:bg-white/10 text-base px-8 py-6 w-full sm:w-auto"
+                  className="bg-white text-navy-dark font-extrabold text-lg px-10 py-7 w-full sm:w-auto shadow-lg hover:bg-white/90"
                 >
                   Nuestros Servicios
                 </Button>
@@ -213,22 +212,22 @@ function Hero() {
             </div>
 
             {/* Trust indicators */}
-            <div className="flex flex-wrap items-center gap-6 mt-12 pt-8 border-t border-white/10">
+            <div className="flex flex-wrap items-center gap-6 mt-12 pt-8 border-t border-white/30">
               <div className="flex items-center gap-2">
                 <Shield className="w-5 h-5 text-gold" />
-                <span className="text-sm text-slate-400">
+                <span className="text-sm font-bold text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.6)]">
                   Licenciados y Certificados
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-gold" />
-                <span className="text-sm text-slate-400">
+                <span className="text-sm font-bold text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.6)]">
                   +500 Clientes Activos
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-gold" />
-                <span className="text-sm text-slate-400">
+                <span className="text-sm font-bold text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.6)]">
                   15 Anos de Experiencia
                 </span>
               </div>
