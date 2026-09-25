@@ -44,6 +44,7 @@ function Navbar() {
     { href: "#testimonios", label: "Testimonios" },
     { href: "#faq", label: "FAQ" },
     { href: "#contacto", label: "Contacto" },
+    { href: "/dispatch", label: "Operaciones" },
   ];
 
   return (
