@@ -1,32 +1,385 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  DISPATCHER
+  DRIVER
+  WAREHOUSE
+  CUSTOMER_SUPPORT
+  VIEWER
+}
+
+enum DriverStatus {
+  OFFLINE
+  AVAILABLE
+  ON_ROUTE
+  BREAK
+}
+
+enum VehicleStatus {
+  ACTIVE
+  MAINTENANCE
+  OUT_OF_SERVICE
+}
+
+enum PackageStatus {
+  RECEIVED
+  READY_FOR_ROUTE
+  IN_TRANSIT
+  OUT_FOR_DELIVERY
+  DELIVERED
+  EXCEPTION
+  RETURNED
+}
+
+enum ShipmentStatus {
+  DRAFT
+  SCHEDULED
+  IN_TRANSIT
+  DELIVERED
+  PARTIAL
+  CANCELLED
+}
+
+enum RouteStatus {
+  PLANNED
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum StopType {
+  PICKUP
+  DELIVERY
+  WAREHOUSE
+  OTHER
+}
+
+enum StopStatus {
+  PENDING
+  ARRIVED
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+enum IncidentType {
+  DELAY
+  DAMAGE
+  ADDRESS
+  CUSTOMER_UNAVAILABLE
+  VEHICLE
+  SAFETY
+  OTHER
+}
+
+enum IncidentSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
 }
 
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
   name      String?
+  role      UserRole @default(VIEWER)
+  active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  driver      Driver?
+  auditEvents AuditEvent[]
 }
 
-model Post {
-  id        String   @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Customer {
+  id          String   @id @default(cuid())
+  externalRef String?  @unique
+  name        String
+  phone       String?
+  email       String?
+  address1    String?
+  address2    String?
+  city        String?
+  state       String?
+  postalCode  String?
+  country     String?  @default("US")
+  latitude    Float?
+  longitude   Float?
+  notes       String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  packages  Package[]
+  shipments Shipment[]
+  stops     Stop[]
+
+  @@index([name])
+  @@index([phone])
+  @@index([email])
+}
+
+model Driver {
+  id            String       @id @default(cuid())
+  userId        String?      @unique
+  employeeCode  String?      @unique
+  name          String
+  phone         String?
+  licenseNumber String?
+  status        DriverStatus @default(OFFLINE)
+  active        Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  routes    Route[]
+  gpsPings  GpsPing[]
+  incidents Incident[]
+}
+
+model Vehicle {
+  id          String        @id @default(cuid())
+  unitNumber  String        @unique
+  vin         String?       @unique
+  plate       String?
+  make        String?
+  model       String?
+  year        Int?
+  capacityLb  Float?
+  status      VehicleStatus @default(ACTIVE)
+  active      Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  routes    Route[]
+  gpsPings  GpsPing[]
+  incidents Incident[]
+}
+
+model Package {
+  id            String        @id @default(cuid())
+  trackingCode  String        @unique
+  customerId    String?
+  description   String?
+  weightLb      Float?
+  pieces        Int           @default(1)
+  status        PackageStatus @default(RECEIVED)
+  barcode       String?       @unique
+  qrCode        String?       @unique
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  customer      Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  shipmentItems ShipmentItem[]
+  stopPackages  StopPackage[]
+
+  @@index([status])
+  @@index([customerId])
+}
+
+model Shipment {
+  id            String         @id @default(cuid())
+  reference     String         @unique
+  customerId    String?
+  status        ShipmentStatus @default(DRAFT)
+  scheduledDate DateTime?
+  originLabel   String?
+  destinationLabel String?
+  notes         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  customer Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items    ShipmentItem[]
+  routes   RouteShipment[]
+
+  @@index([status])
+  @@index([scheduledDate])
+}
+
+model ShipmentItem {
+  id         String @id @default(cuid())
+  shipmentId String
+  packageId  String
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  package  Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@unique([shipmentId, packageId])
+  @@index([packageId])
+}
+
+model Route {
+  id            String      @id @default(cuid())
+  routeNumber   String      @unique
+  serviceDate   DateTime
+  status        RouteStatus @default(PLANNED)
+  driverId      String?
+  vehicleId     String?
+  startLabel    String?
+  endLabel      String?
+  plannedMiles  Float?
+  actualMiles   Float?
+  plannedStart  DateTime?
+  actualStart   DateTime?
+  plannedEnd    DateTime?
+  actualEnd     DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  driver    Driver?         @relation(fields: [driverId], references: [id], onDelete: SetNull)
+  vehicle   Vehicle?        @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  stops     Stop[]
+  shipments RouteShipment[]
+  gpsPings  GpsPing[]
+  incidents Incident[]
+
+  @@index([serviceDate])
+  @@index([status])
+  @@index([driverId])
+  @@index([vehicleId])
+}
+
+model RouteShipment {
+  id         String @id @default(cuid())
+  routeId    String
+  shipmentId String
+
+  route    Route    @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@unique([routeId, shipmentId])
+  @@index([shipmentId])
+}
+
+model Stop {
+  id            String     @id @default(cuid())
+  routeId       String
+  customerId    String?
+  sequence      Int
+  type          StopType
+  status        StopStatus @default(PENDING)
+  label         String?
+  address1      String?
+  address2      String?
+  city          String?
+  state         String?
+  postalCode    String?
+  latitude      Float?
+  longitude     Float?
+  plannedEta    DateTime?
+  actualArrival DateTime?
+  completedAt   DateTime?
+  notes         String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  route      Route          @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  customer   Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  packages   StopPackage[]
+  proofs     ProofOfDelivery[]
+  incidents  Incident[]
+
+  @@unique([routeId, sequence])
+  @@index([status])
+  @@index([customerId])
+}
+
+model StopPackage {
+  id        String @id @default(cuid())
+  stopId    String
+  packageId String
+
+  stop    Stop    @relation(fields: [stopId], references: [id], onDelete: Cascade)
+  package Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@unique([stopId, packageId])
+  @@index([packageId])
+}
+
+model GpsPing {
+  id         String   @id @default(cuid())
+  driverId   String?
+  vehicleId  String?
+  routeId    String?
+  latitude   Float
+  longitude  Float
+  accuracyM  Float?
+  speedMph   Float?
+  headingDeg Float?
+  capturedAt DateTime @default(now())
+
+  driver  Driver?  @relation(fields: [driverId], references: [id], onDelete: SetNull)
+  vehicle Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  route   Route?   @relation(fields: [routeId], references: [id], onDelete: SetNull)
+
+  @@index([routeId, capturedAt])
+  @@index([driverId, capturedAt])
+  @@index([vehicleId, capturedAt])
+}
+
+model ProofOfDelivery {
+  id            String   @id @default(cuid())
+  stopId        String
+  recipientName String?
+  signatureUrl  String?
+  photoUrl      String?
+  latitude      Float?
+  longitude     Float?
+  deliveredAt   DateTime @default(now())
+  notes         String?
+
+  stop Stop @relation(fields: [stopId], references: [id], onDelete: Cascade)
+
+  @@index([stopId])
+}
+
+model Incident {
+  id          String           @id @default(cuid())
+  routeId     String?
+  stopId      String?
+  driverId    String?
+  vehicleId   String?
+  type        IncidentType
+  severity    IncidentSeverity @default(LOW)
+  title       String
+  description String?
+  resolved    Boolean          @default(false)
+  resolvedAt  DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  route   Route?   @relation(fields: [routeId], references: [id], onDelete: SetNull)
+  stop    Stop?    @relation(fields: [stopId], references: [id], onDelete: SetNull)
+  driver  Driver?  @relation(fields: [driverId], references: [id], onDelete: SetNull)
+  vehicle Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+
+  @@index([resolved, severity])
+  @@index([routeId])
+}
+
+model AuditEvent {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  action      String
+  entityType  String
+  entityId    String?
+  metadata    Json?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  actor User? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
 }
