@@ -1,10 +1,43 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+const disconnectedPayload = (message: string) => ({
+  connected: false,
+  generatedAt: new Date().toISOString(),
+  metrics: {
+    routesToday: 0,
+    activeDrivers: 0,
+    activeVehicles: 0,
+    pendingStops: 0,
+    openIncidents: 0,
+    deliveredToday: 0,
+  },
+  routes: [],
+  drivers: [],
+  vehicles: [],
+  incidents: [],
+  message,
+});
+
 export async function GET() {
+  const databaseUrl = process.env.DATABASE_URL ?? "";
+
+  if (!/^postgres(?:ql)?:\/\//i.test(databaseUrl)) {
+    return NextResponse.json(
+      disconnectedPayload("PostgreSQL todavía no está configurado en este entorno."),
+      { status: 200, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
   try {
+    const { db } = await import("@/lib/db");
+
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+
     const [
       routesToday,
       activeDrivers,
@@ -17,25 +50,13 @@ export async function GET() {
       vehicles,
       incidents,
     ] = await Promise.all([
-      db.route.count({
-        where: {
-          serviceDate: {
-            gte: new Date(new Date().setHours(0, 0, 0, 0)),
-            lt: new Date(new Date().setHours(24, 0, 0, 0)),
-          },
-        },
-      }),
+      db.route.count({ where: { serviceDate: { gte: start, lt: end } } }),
       db.driver.count({ where: { active: true, status: { not: "OFFLINE" } } }),
       db.vehicle.count({ where: { active: true, status: "ACTIVE" } }),
       db.stop.count({ where: { status: { in: ["PENDING", "ARRIVED"] } } }),
       db.incident.count({ where: { resolved: false } }),
       db.package.count({
-        where: {
-          status: "DELIVERED",
-          updatedAt: {
-            gte: new Date(new Date().setHours(0, 0, 0, 0)),
-          },
-        },
+        where: { status: "DELIVERED", updatedAt: { gte: start, lt: end } },
       }),
       db.route.findMany({
         orderBy: [{ serviceDate: "desc" }, { routeNumber: "asc" }],
@@ -114,23 +135,7 @@ export async function GET() {
   } catch (error) {
     console.error("transport dashboard unavailable", error);
     return NextResponse.json(
-      {
-        connected: false,
-        generatedAt: new Date().toISOString(),
-        metrics: {
-          routesToday: 0,
-          activeDrivers: 0,
-          activeVehicles: 0,
-          pendingStops: 0,
-          openIncidents: 0,
-          deliveredToday: 0,
-        },
-        routes: [],
-        drivers: [],
-        vehicles: [],
-        incidents: [],
-        message: "Base de datos de transporte no disponible.",
-      },
+      disconnectedPayload("Base de datos de transporte no disponible."),
       { status: 200, headers: { "Cache-Control": "no-store" } },
     );
   }

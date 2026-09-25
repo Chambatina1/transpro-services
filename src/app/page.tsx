@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import DispatchPage from "./dispatch/page";
 
 export default function Home() {
-  redirect("/dispatch");
+  return <DispatchPage />;
 }
